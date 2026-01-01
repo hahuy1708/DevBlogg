@@ -12,55 +12,91 @@
 - **Frontend**: Vue.js + Vite + TailwindCSS.
 - **Database**: MySQL.
 - **ORM**: Django ORM.
-- **Authentication**: JWT + OAuth2 (Google/GitHub) using `django-allauth` + `dj-rest-auth` + `djangorestframework-simplejwt`.
-- **Documentation**: Swagger (drf-spectacular).
+- **Authentication**: JWT + OAuth2 (Google/GitHub) 
+  - `django-allauth` 
+  - `dj-rest-auth` 
+  - `djangorestframework-simplejwt`
+- **API Docs**: Swagger (drf-spectacular).
 - **Storage**: Local (Dev) / Cloudinary (Prod).
 
-## 3. Project Structure & Layering
-The backend MUST follow these layer dependency rules strictly:
+## 3. Project Structure
+The backend MUST follow these rules strictly:
 
 ### A. Auth Apps (`devblogg_auth`)
-- **Features:** Handle user model (CustomUser), authentication, user-related endpoints (register, login, profile,...).
-- 
+
+Responsible for:
+  - CustomUser model
+  - Authentication / Authorization
+  - User registration, login, profile
+  - JWT, OAuth2
 
 ### B. Core Apps (`devblogg_core`)
-- **Features:** Handle main domain, business logic, and routers
-- 
+
+Responsible for:
+  - Business logic (Posts, Comments, Likes, Bookmarks, Reports)
+  - Domain rules
+  - Feature APIs
+
+### C. Composition Root (`devblogg_backend`)
+
+Responsible for:
+  - Project settings
+  - Middleware
+  - Global error handling
+  - API documentation
+  - CORS, Database configuration
+  - Email configuration
+
+
+## 4. Architecture
+The backend follows a Service-Oriented Architecture tailored for Django. This ensures adherence to SOLID principles, specifically decoupling business logic from the HTTP layer (Views) and the Database layer (Models).
+
+### A. Services
+- **Role:** The "Brain" of the application. Contains all pure business logic.
+
+- **Responsibilities:**
+  - Handle complex operations (e.g., ClaimPost, PublishPost, CalculateStats).
+  - Orchestrate transactions (Atomic operations involving multiple models).
+  - Call external APIs (Email, Cloudinary, AI).
+- **Rule:** Services do NOT know about request or response objects. They take clean data (arguments/DTOs) and return results or raise domain exceptions.
+
+- **SOLID Application:** SRP: Each service function does one specific business task.
+
+### B. Serializers
+- **Role:** The "Gatekeeper" and "Translator".
+
+- **Responsibilities:**
+  - Input Validation: Ensure data sent by users matches the expected format (types, lengths, required fields).
+  - Data Transformation: Convert complex querysets/model instances into JSON (Serialization) and JSON into Python objects (Deserialization).
+  - Representation: Define what data is exposed to the API clients (hiding sensitive fields like password_hash).
+- **Rule:** Do NOT put complex business logic (like sending emails) inside serializers.save(). Keep serializers focused on data structure.
+
+### C. Views
+- **Role:** The "Controller" / Interface Layer.
+
+**Responsibilities:**
+  - Handle HTTP: Receive requests, parse parameters, and determine the correct response status codes (200, 201, 400, etc.).
+
+  - Permissions & Auth: Check if the user is logged in (IsAuthenticated) or has the right role (IsAdminUser).
+
+  - Orchestration: Call the appropriate Service to execute the logic.
+
+  - Response: Return the result from the Service using the Serializer to format the output.
+- **Rule:** Views should be "Thin". If you see more than 10 lines of logic in a View method, move it to a Service.
+
+### D. Models
+- **Role:** The "Skeleton". Represents database tables.
+
+- **Responsibilities:**
+  - Define database schema (Columns, Types).
+  - Define relationships (ForeignKey, ManyToMany).
+  - Ensure Data Integrity (Unique constraints, Database-level validation).
+  - Fat Model (Limited): Only include logic strictly related to the data instance itself (e.g., full_name property, __str__ method).
+
+- **Rule:** Avoid heavy logic here. Models should focus on data structure, not business processes.
+
 ---
 
-# CODING CONVENTIONS & BEST PRACTICES
-
-## 1. Backend (Python / Django)
-
-### General
-- Use `async/await` for all I/O operations (Database, File, API calls).
-- Use `var` when the type is obvious from the right side.
-- Follow PascalCase for classes/methods (`GetByIdAsync`) and camelCase for parameters/local variables (`userId`).
-- Use Interface Injection via Constructor.
-
-### Controller Guidelines
-- Always return `ActionResult<T>`.
-- Use `[HttpGet]`, `[HttpPost]`, etc., explicitly.
-- Do NOT put business logic in Controllers.
-- Always use DTOs for Request bodies and Response types. Never return Domain Entities directly.
-
-### Error Handling
-- Use Global Exception Handler Middleware (do not use try-catch in every controller).
-- Create custom exceptions in Domain/Application layers (e.g., `NotFoundException`, `ValidationException`).
-
-## 2. Frontend (Vue.js)
-
-### Components
-- Use `<script setup>` with Composition API.
-- Use TypeScript strictly.
-- Component names must be Multi-Word (e.g., `PostCard.vue`, not `Card.vue`).
-
-### API Calls
-- Put all API calls in `src/services/xxxService.ts` (e.g., `authService.ts`).
-- Do not call `axios` directly inside `.vue` files.
-- Use Pinia for state management (Auth, User Profile).
-
----
 # CORE BUSINESS LOGIC & RULES
 
 ## 1. IDENTITY & USERS MODULE
