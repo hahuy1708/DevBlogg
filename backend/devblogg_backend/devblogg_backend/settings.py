@@ -11,12 +11,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 import environ # type: ignore
 import os
+from datetime import timedelta
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent # redirect to backend/
 
-# Load environment variables
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
@@ -24,11 +23,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
+
 
 ALLOWED_HOSTS = []
 
@@ -43,8 +41,29 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # django-allauth requires the Sites framework
+    'django.contrib.sites',
+
     'rest_framework',
+
+    # dj-rest-auth (auth endpoints) + optional DRF token model
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+
+    # django-allauth (email/password auth + social auth)
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
+
+    # SimpleJWT refresh token blacklist support (recommended with rotation)
+    'rest_framework_simplejwt.token_blacklist',
+
+    # Project apps
     'devblogg_auth',
+    'devblogg_common',
     'devblogg_core',
 ]
 
@@ -56,6 +75,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Required by django-allauth v0.61+ for some account/session flows
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'devblogg_backend.urls'
@@ -76,6 +98,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'devblogg_backend.wsgi.application'
+
+AUTH_USER_MODEL = 'devblogg_auth.User'
+
+# django-allauth uses the Sites framework to know which domain it is serving.
+SITE_ID = env.int('SITE_ID', default=1)
+
+# Authentication backends:
+# - ModelBackend: default Django admin authentication
+# - allauth: email/login flows and social authentication
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
 
 
 # Database
@@ -131,3 +166,79 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# --- Django REST Framework ---
+
+REST_FRAMEWORK = {
+    # Use JWT for APIs; keep SessionAuthentication for browsable API + admin convenience.
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    # Default: anonymous users can read, authenticated users can write.
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+}
+
+
+# --- SimpleJWT ---
+
+SIMPLE_JWT = {
+    # Token lifetime
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=15)
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=env.int('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=7)
+    ),
+
+    # Rotation/blacklist (recommended)
+    'ROTATE_REFRESH_TOKENS': env.bool('JWT_ROTATE_REFRESH_TOKENS', default=True),
+    'BLACKLIST_AFTER_ROTATION': env.bool('JWT_BLACKLIST_AFTER_ROTATION', default=True),
+
+    # Security / auditing
+    'UPDATE_LAST_LOGIN': env.bool('JWT_UPDATE_LAST_LOGIN', default=True),
+}
+
+
+# --- dj-rest-auth (uses DRF + SimpleJWT) ---
+
+REST_AUTH = {
+    # Tell dj-rest-auth to use SimpleJWT instead of DRF TokenAuthentication.
+    'USE_JWT': True,
+
+    # Cookie-based JWT is optional; keep disabled by default for SPA using Authorization header.
+    # If you want HttpOnly cookies later, set these env vars and enable.
+    'JWT_AUTH_COOKIE': env('JWT_AUTH_COOKIE', default=''),
+    'JWT_AUTH_REFRESH_COOKIE': env('JWT_AUTH_REFRESH_COOKIE', default=''),
+    'JWT_AUTH_HTTPONLY': env.bool('JWT_AUTH_HTTPONLY', default=True),
+    'JWT_AUTH_SECURE': env.bool('JWT_AUTH_SECURE', default=not DEBUG),
+    'JWT_AUTH_SAMESITE': env('JWT_AUTH_SAMESITE', default='Lax'),
+}
+
+
+# --- django-allauth (email/password + social auth) ---
+
+# Prefer email login in a system where the User model uses email as USERNAME_FIELD.
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+
+# allauth v0.63+ style settings (avoid deprecation warnings)
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = [
+    'email*',
+    'username*',
+    'password1*',
+    'password2*',
+]
+
+# Email verification policy: "none" (dev), "optional", or "mandatory"
+ACCOUNT_EMAIL_VERIFICATION = env('ACCOUNT_EMAIL_VERIFICATION', default='none')
+
+
+# --- Misc ---
+
+# Silence Django's default auto field warnings (your models mostly use UUID already).
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
