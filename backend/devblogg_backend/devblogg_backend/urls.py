@@ -15,8 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+from devblogg_auth.views import GitHubLogin, GoogleLogin
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path('api/auth/', include('dj_rest_auth.urls')),
+    path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('api/auth/google/', GoogleLogin.as_view(), name='google_login'),
+    path('api/auth/github/', GitHubLogin.as_view(), name='github_login'),
+
+    # path('api/', include('devblogg_core.urls')),
 ]
