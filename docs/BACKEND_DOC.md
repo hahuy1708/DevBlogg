@@ -9,7 +9,7 @@
 
 ## 2. Tech Stack
 - **Backend**: Python + Django + Django REST Framework (DRF).
-- **Frontend**: Vue.js + Vite + TailwindCSS.
+- **Frontend**: Next.js + TailwindCSS.
 - **Database**: MySQL.
 - **ORM**: Django ORM.
 - **Authentication**: JWT + OAuth2 (Google/GitHub) 
@@ -202,3 +202,51 @@ A Post must have one of the following statuses (`PostStatus` enum):
 - **Stale Review Handling**: If a post stays in `InReview` for more than 30 minutes without action, it becomes available for other moderators to "Claim" again.
 
 ---
+
+# API ENDPOINT
+## 1. Authentication Module
+
+| Method | Endpoint                     | Description                          |
+|--------|------------------------------|--------------------------------------|
+| POST   | /api/auth/register/          | Register a new user                  |
+| POST   | /api/auth/login/             | User login (returns JWT token)       |
+| POST   | /api/auth/token/refresh/     | Get a new Access Token when expired  |
+| POST   | /api/auth/logout/            | Logout (Blacklist token)             |
+| GET    | /api/auth/user/              | Get current User info (me)           |
+| PATCH  | /api/auth/user/              | Update Profile (Bio, Avatar, DisplayName) |
+| POST   | /api/auth/google/            | Google OAuth2 Login (Frontend sends code/token) |
+| POST   | /api/auth/github/            | GitHub OAuth2 Login                  |
+
+## 2. Content Module: Posts
+
+| Method | Endpoint                     | Description                          | 
+|--------|------------------------------|--------------------------------------|
+| GET    | /api/posts/                  | Feed homepage. Filter by status=PUBLISHED. |
+| GET    | /api/posts/{slug}/           | View post details. |
+| POST   | /api/posts/                  | Create a new post. Default status is DRAFT. Input: Title, Content, Tags, Summary. |
+| PATCH  | /api/posts/{id}/             | Edit a post. Only the author can edit it. If the post is Published -> keep it Published. If Rejected -> move back to Pending. |
+| DELETE | /api/posts/{id}/             | Delete a post (Soft Delete). set is_deleted=True. |
+| POST   | /api/posts/{id}/publish/     | Submit for review. Change status from DRAFT -> PENDING. (If user is Mod/Admin -> PUBLISHED always). |
+| GET    | /api/posts/me/drafts/        | View drafts. Get list of DRAFT posts of the current user. |
+
+## 3. Interaction Module
+
+| Method | Endpoint                     | Description                          |
+|--------|------------------------------|--------------------------------------|
+| POST	 | /api/posts/{id}/like/	      | Toggle Like. If already like -> unlike (delete record), else create like record. |
+| POST	 | /api/posts/{id}/bookmark/  	| Toggle Bookmark. Save post to bookmark list. |
+| GET	   | /api/bookmarks/	            | Get user bookmark list. |
+| POST	 | /api/posts/{id}/comments/  	| Write a comment on a post. |
+| POST	 | /api/comments/{id}/reply/	  | Reply to a comment. Input: content, parent_id. |
+| DELETE | /api/comments/{id}/	        | Delete a comment. Only the author can delete it. Soft delete. |
+| POST	 | /api/posts/{id}/report/	    | Report a post. Input: reason. Logic: If > 5 unique reports -> Auto move to PENDING. |
+
+## 4. Moderation Module
+
+| Method | Endpoint                     | Description                          |
+|--------|------------------------------|--------------------------------------|
+| GET	   | /api/moderation/queue/	      | Get queue list of posts with status=PENDING or status=IN_REVIEW (of the current moderator). Sorted by time.
+| POST	 | /api/moderation/posts/{id}/claim/ | Claim a post for review. Change status from PENDING -> IN_REVIEW. Set AssignedModeratorId and ClaimedAt. |
+| POST	 | /api/moderation/posts/{id}/approve/ | Approve a post. Change status from IN_REVIEW -> PUBLISHED. Only the assigned moderator can approve. |
+| POST	 | /api/moderation/posts/{id}/reject/  | Reject a post. Change status from IN_REVIEW -> REJECTED. Input: reason. Only the assigned moderator can reject. |
+| POST	 | /api/moderation/users/{id}/ban/     | Ban a user. Admin only. Banned users cannot login. |
