@@ -257,10 +257,6 @@ REST_AUTH = {
 
 # --- django-allauth (email/password + social auth) ---
 
-# Prefer email login in a system where the User model uses email as USERNAME_FIELD.
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_UNIQUE_EMAIL = True
-
 # allauth v0.63+ style settings (avoid deprecation warnings)
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = [
