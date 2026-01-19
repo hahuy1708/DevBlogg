@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
 
     'rest_framework',
+    'drf_spectacular',
 
     # dj-rest-auth (auth endpoints) + optional DRF token model
     'rest_framework.authtoken',
@@ -182,6 +183,16 @@ REST_FRAMEWORK = {
     ),
     # Custom exception handler for consistent error responses.
     'EXCEPTION_HANDLER': 'devblogg_common.exceptions.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'DevBlogg API Project',
+    'DESCRIPTION': 'API system for DevBlogg (Blog for developers)',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_PATCH': True,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 # When server 500 errors occur, tracebacks are logged to the console.
