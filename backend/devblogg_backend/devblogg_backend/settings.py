@@ -306,3 +306,24 @@ ACCOUNT_EMAIL_VERIFICATION = env('ACCOUNT_EMAIL_VERIFICATION', default='none')
 
 # Silence Django's default auto field warnings (your models mostly use UUID already).
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('SOCIAL_AUTH_GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('SOCIAL_AUTH_GOOGLE_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'}
+    },
+    'github': {
+        'APP': {
+            'client_id': os.getenv('SOCIAL_AUTH_GITHUB_CLIENT_ID'),
+            'secret': os.getenv('SOCIAL_AUTH_GITHUB_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['user:email'],
+    }
+}
