@@ -12,27 +12,34 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const code = searchParams.get('code');
-   
-    const provider = localStorage.getItem('auth_provider') || 'github'; 
 
-    if (code) {
-      const endpoint = provider === 'github' ? '/api/auth/github/' : '/api/auth/google/';
-      
-      api.post(endpoint, {
-        code: code, 
-      })
+    const stateProvider = searchParams.get('state');
+    const storedProvider = typeof window !== 'undefined' ? localStorage.getItem('auth_provider') : null;
+    const provider = (stateProvider === 'google' || stateProvider === 'github')
+      ? stateProvider
+      : (storedProvider === 'google' || storedProvider === 'github')
+        ? storedProvider
+        : 'github';
+
+    if (!code) {
+      setStatus('Missing OAuth code in callback URL.');
+      return;
+    }
+
+    const endpoint = provider === 'github' ? '/api/auth/github/' : '/api/auth/google/';
+
+    api.post(endpoint, { code })
       .then((res) => {
         setStatus('Login success!');
-        console.log('Backend Response:', res.data);
         localStorage.setItem('access_token', res.data.access);
         localStorage.setItem('refresh_token', res.data.refresh);
-        setTimeout(() => router.push('/'), 2000);
+        setTimeout(() => router.push('/'), 1000);
       })
       .catch((err) => {
-        setStatus('Error: ' + JSON.stringify(err.response?.data));
+        const message = err.response?.data ? JSON.stringify(err.response.data) : String(err.message || err);
+        setStatus('Error: ' + message);
         console.error(err);
       });
-    }
   }, [searchParams, router]);
 
   return (
