@@ -30,6 +30,9 @@ DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = []
 
+# Frontend base URL used by OAuth callback (dev)
+FRONTEND_URL = env('FRONTEND_URL')
+
 
 # Application definition
 
